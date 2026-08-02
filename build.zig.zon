@@ -2,7 +2,7 @@
     .name = .webgpu_raytracer,
     .version = "0.0.0",
     .fingerprint = 0x85418648f413cad2,
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.17.0-dev.1454+5faa79730",
     .dependencies = .{ },
     .paths = .{
         "build.zig",

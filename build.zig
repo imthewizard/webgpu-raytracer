@@ -1,17 +1,24 @@
 const std = @import("std");
 const builtin = @import("builtin");
+// const Optimize = std.lang.Optimize;
 
 pub fn build(b: *std.Build) void {
     // const target = b.standardTargetOptions(.{});
     const target = b.resolveTargetQuery(.{ .cpu_arch = .wasm32, .os_tag = .emscripten });
     const optimize = b.standardOptimizeOption(.{});
 
-    if (b.sysroot == null) {
-        std.log.err("Must provide emscripten sysroot folder (ex: --sysroot ../emsdk/upstream/emscripten/cache/sysroot )", .{});
+    const emscripten_sysroot_dir = b.option([]const u8, "emsysroot", "Path to the emscripten sysroot directory") orelse {
+        std.log.err("Must provide emscripten sysroot folder (ex: -Demsysroot ../emsdk/upstream/emscripten/cache/sysroot )", .{});
         return;
-    }
+    };
+    // if (b.args == null) {
+    //     std.log.err("Must provide emscripten sysroot folder (ex: --sysroot ../emsdk/upstream/emscripten/cache/sysroot )", .{});
+    //     return;
+    // }
+    //
+    // const emscripten_sysroot_dir = b.sysroot.?;
 
-    const emscripten_sysroot_dir = b.sysroot.?;
+
     const emscripten_dir = b.pathJoin(&.{ emscripten_sysroot_dir, "..", ".." });
     const emscripten_sysroot_include = b.pathJoin(&.{ emscripten_sysroot_dir, "include" });
     const emscripten_emdawnwebgpu_include = b.pathJoin(&.{ emscripten_dir, "cache", "ports", "emdawnwebgpu", "emdawnwebgpu_pkg", "webgpu", "include" });
@@ -57,18 +64,18 @@ pub fn build(b: *std.Build) void {
 }
 
 fn getOptimizationFlag() []const u8 {
-    if (builtin.mode == .ReleaseSmall) {
+    if (builtin.mode == .small) {
         return "-Oz";
-    } else if (builtin.mode == .ReleaseSafe) {
+    } else if (builtin.mode == .safe) {
         return "-O2";
-    } else if (builtin.mode == .ReleaseFast) {
+    } else if (builtin.mode == .fast) {
         return "-O3";
     }
     return "-O0";
 }
 
 fn getAssertionFlag() []const u8 {
-    if (builtin.mode == .Debug) {
+    if (builtin.mode == .debug) {
         return "-sASSERTIONS=2";
     }
     return ""; // default
