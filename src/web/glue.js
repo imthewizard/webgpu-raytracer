@@ -6,6 +6,8 @@ let presentationFormat
 
 const canvas = document.getElementById("canvas")
 
+let baseShaderModule
+
 export async function initWebGPU() {
 	if (!navigator.gpu) {
 		alert("browser does not support WebGPU")
@@ -27,6 +29,8 @@ export async function initWebGPU() {
 		}
 	})
 
+	baseShaderModule = await loadShader("./triangle.wgsl")
+
 	presentationFormat = navigator.gpu.getPreferredCanvasFormat()
 
 	context = canvas.getContext("webgpu")
@@ -36,30 +40,23 @@ export async function initWebGPU() {
 	})
 }
 
+async function loadShader(file) {
+	const response = await fetch(file);
+
+	if (!response.ok) {
+		throw new Error(`Failed to load shader: ${file}`)
+	}
+
+	const code = await response.text()
+
+	return device.createShaderModule({ label: file, code: code })
+}
+
 export const importObject = {
 	env: {
 		js_print_str: js_print_str,
 		drawTriangle: function() {
-			const module = device.createShaderModule({
-				label: "triangle",
-				code: /* wgsl */ `
-			  @vertex fn vs(
-				@builtin(vertex_index) vertexIndex : u32
-			  ) -> @builtin(position) vec4f {
-				let pos = array(
-				  vec2f( 0.0,  0.5),  // top center
-				  vec2f(-0.5, -0.5),  // bottom left
-				  vec2f( 0.5, -0.5)   // bottom right
-				);
-
-				return vec4f(pos[vertexIndex], 0.0, 1.0);
-			  }
-
-			  @fragment fn fs() -> @location(0) vec4f {
-				return vec4f(1.0, 0.0, 0.0, 1.0);
-			  }
-			`,
-			})
+			const module = baseShaderModule
 
 			const pipeline = device.createRenderPipeline({
 				label: "triangle",
