@@ -62,11 +62,11 @@ export const importObject = {
 				label: "triangle",
 				layout: "auto",
 				vertex: {
-					entryPoint: "vs",
+					entryPoint: "vertexMain",
 					module,
 				},
 				fragment: {
-					entryPoint: "fs",
+					entryPoint: "fragmentMain",
 					module,
 					targets: [{ format: presentationFormat }],
 				},
