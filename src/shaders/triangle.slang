@@ -8,15 +8,25 @@ VertexOutput vertexMain(uint vertexID : SV_VertexID)
 {
 	VertexOutput out;
 
-    float2 pos[3] = {
-        float2( 0.0,  0.5),
-        float2(-0.5, -0.5),
-        float2( 0.5, -0.5)
+    float2 pos[6] = {
+		// Bottom left
+		float2(-1, -1),
+		float2( 1, -1),
+		float2(-1,  1),
+
+		// Top right
+		float2(-1,  1),
+		float2( 1, -1),
+		float2( 1,  1),
     };
-    float2 uv[3] = {
-        float2(0.5, 1.0),
-        float2(0.0, 0.0),
-        float2(1.0, 0.0)
+    float2 uv[6] = {
+		float2(0.0, 0.0),
+		float2(1.0, 0.0),
+		float2(0.0, 1.0),
+
+		float2(0.0, 1.0),
+		float2(1.0, 0.0),
+		float2(1.0, 1.0),
     };
 
 	out.pos = float4(pos[vertexID], 0.0, 1.0);

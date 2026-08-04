@@ -138,7 +138,7 @@ function invokeVertFragShader() {
 	const pass = encoder.beginRenderPass(renderPassDescriptor)
 	pass.setPipeline(pipeline)
 	pass.setBindGroup(0, bindGroup)
-	pass.draw(3)
+	pass.draw(6)
 	pass.end()
 
 	const commandBuffer = encoder.finish()
