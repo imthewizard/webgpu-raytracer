@@ -1,24 +1,40 @@
 [format("rgba8")]
 WTexture2D tex;
 
+struct Sphere {
+	float3 center;
+	float radius;
+};
+
 struct Ray {
 	float3 origin;
 	float3 direction;
 };
 
-bool hit_sphere(float3 center, float radius, Ray ray)
+// https://iquilezles.org/articles/intersectors/
+float intersect_sphere(Ray ray, Sphere sphere)
 {
-	const float3 oc = center - ray.origin;
-	const float a = dot(ray.direction, ray.direction);
-	const float b = -2.0 * dot(ray.direction, oc);
-	const float c = dot(oc, oc) - radius * radius;
-	const float discriminant = b * b - 4 * a * c;
-	return (discriminant >= 0.0);
+    float3 oc = ray.origin - sphere.center;
+    float b = dot( oc, ray.direction );
+    float3 qc = oc - b*ray.direction;
+    float h = sphere.radius*sphere.radius - dot( qc, qc );
+    if( h<0.0 ) return -1.0; // no intersection
+
+	float t1 = -b-h;
+	float t2 = -b+h;
+	if (t1 < 0.0) {
+		return t2;
+	} else {
+		return t1;
+	}
 }
 
 float3 ray_color(Ray ray)
 {
-	if (hit_sphere(float3(0, 0, 1.5), 0.5, ray)) return float3(1.0, 0.0, 0.0);
+	Sphere sphere = {float3(0, 0, 1.5), 0.5};
+	if (intersect_sphere(ray, sphere) > 0.0) {
+		return float3(1.0, 0.0, 0.0);
+	}
 	float h = (ray.direction.y + 1.0) / 2;
 	return lerp(float3(0.5, 0.7, 1.0), float3(1.0, 1.0, 1.0), h);
 }
