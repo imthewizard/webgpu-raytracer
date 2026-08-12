@@ -1,3 +1,5 @@
+#define FLOAT_MAX 3.40282346638528859812e+38
+
 [format("rgba8")]
 WTexture2D tex;
 
@@ -9,34 +11,57 @@ struct Sphere {
 struct Ray {
 	float3 origin;
 	float3 direction;
+
+	float3 point(float t)
+	{
+		return origin + t * direction;
+	}
 };
 
+struct RayResult {
+	float3 normal;
+	float t;
+}
+
 // https://iquilezles.org/articles/intersectors/
-float intersect_sphere(Ray ray, Sphere sphere)
+RayResult intersect_sphere(Ray ray, Sphere sphere)
 {
-    float3 oc = ray.origin - sphere.center;
-    float b = dot( oc, ray.direction );
-    float3 qc = oc - b*ray.direction;
-    float h = sphere.radius*sphere.radius - dot( qc, qc );
-    if( h<0.0 ) return -1.0; // no intersection
+	float3 oc = ray.origin - sphere.center;
+	float b = dot( oc, ray.direction );
+	float3 qc = oc - b*ray.direction;
+	float h = sphere.radius*sphere.radius - dot( qc, qc );
+	if( h<0.0 ) return {float3(0), -1.0}; // no intersection
+	h = sqrt(h);
 
 	float t1 = -b-h;
 	float t2 = -b+h;
-	if (t1 < 0.0) {
-		return t2;
-	} else {
-		return t1;
-	}
+	if (t2 < 0.0) return {float3(0), -1.0}; // no intersection
+
+	float t = t1 < 0.0 ? t1 : t2;
+	float3 point = ray.point(t);
+	float3 normal = (point - sphere.center) / sphere.radius;
+	return {normal, t};
 }
 
 float3 ray_color(Ray ray)
 {
-	Sphere sphere = {float3(0, 0, 1.5), 0.5};
-	if (intersect_sphere(ray, sphere) > 0.0) {
-		return float3(1.0, 0.0, 0.0);
+	Sphere spheres[3] = {
+		{float3(0, 0, 1.5), 0.5},
+		{float3(3, 0, 4.0), 0.35},
+		{float3(-2.5, -0.5, 3.0), 0.65},
+	};
+	RayResult closest_hit = {float3(0.0), FLOAT_MAX};
+	for (int i = 0; i < 3; i++) {
+		RayResult info = intersect_sphere(ray, spheres[i]);
+		if (info.t > 0.0 && info.t < closest_hit.t) {
+			closest_hit = info;
+		}
+	}
+	if (closest_hit.t < FLOAT_MAX) {
+		return (closest_hit.normal + 1) / 2;
 	}
 	float h = (ray.direction.y + 1.0) / 2;
-	return lerp(float3(0.5, 0.7, 1.0), float3(1.0, 1.0, 1.0), h);
+	return lerp(float3(1.0, 1.0, 1.0), float3(0.3, 0.7, 1.0), h);
 }
 
 [shader("compute")]
