@@ -6,6 +6,25 @@ WTexture2D tex;
 struct Sphere {
 	float3 center;
 	float radius;
+
+	RayResult intersect(Ray ray)
+	{
+		float3 oc = ray.origin - this.center;
+		float b = dot( oc, ray.direction );
+		float3 qc = oc - b*ray.direction;
+		float h = this.radius*this.radius - dot( qc, qc );
+		if( h<0.0 ) return RayResult.no_hit(); // no intersection
+		h = sqrt(h);
+
+		float t1 = -b-h;
+		float t2 = -b+h;
+		if (t2 < 0.0) return RayResult.no_hit(); // no intersection
+
+		float t = t1 < 0.0 ? t1 : t2;
+		float3 point = ray.point(t);
+		float3 normal = (point - this.center) / this.radius;
+		return {normal, t};
+	}
 };
 
 struct Ray {
@@ -14,33 +33,23 @@ struct Ray {
 
 	float3 point(float t)
 	{
-		return origin + t * direction;
+		return this.origin + t * this.direction;
 	}
 };
 
 struct RayResult {
 	float3 normal;
 	float t;
-}
 
-// https://iquilezles.org/articles/intersectors/
-RayResult intersect_sphere(Ray ray, Sphere sphere)
-{
-	float3 oc = ray.origin - sphere.center;
-	float b = dot( oc, ray.direction );
-	float3 qc = oc - b*ray.direction;
-	float h = sphere.radius*sphere.radius - dot( qc, qc );
-	if( h<0.0 ) return {float3(0), -1.0}; // no intersection
-	h = sqrt(h);
+	static RayResult no_hit()
+	{
+		return {float3(0), -1.0};
+	}
 
-	float t1 = -b-h;
-	float t2 = -b+h;
-	if (t2 < 0.0) return {float3(0), -1.0}; // no intersection
-
-	float t = t1 < 0.0 ? t1 : t2;
-	float3 point = ray.point(t);
-	float3 normal = (point - sphere.center) / sphere.radius;
-	return {normal, t};
+	bool has_hit()
+	{
+		return this.t > 0.0;
+	}
 }
 
 float3 ray_color(Ray ray)
@@ -52,8 +61,8 @@ float3 ray_color(Ray ray)
 	};
 	RayResult closest_hit = {float3(0.0), FLOAT_MAX};
 	for (int i = 0; i < 3; i++) {
-		RayResult info = intersect_sphere(ray, spheres[i]);
-		if (info.t > 0.0 && info.t < closest_hit.t) {
+		RayResult info = spheres[i].intersect(ray);
+		if (info.has_hit() && info.t < closest_hit.t) {
 			closest_hit = info;
 		}
 	}
