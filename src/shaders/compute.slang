@@ -93,5 +93,6 @@ void computeMain(uint3 thread_id : SV_DispatchThreadID)
 	const Ray ray = Ray(camera_center, normalize(ray_direction));
 
 	float3 pixel_color = ray_color(ray);
+	pixel_color = pow(pixel_color, float3(1.0 / 2.2));
 	tex.Store(pixel, float4(pixel_color, 1.0));
 }
