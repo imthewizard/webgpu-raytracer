@@ -56,7 +56,7 @@ void computeMain(uint3 thread_id : SV_DispatchThreadID)
 	const float3 camera_center = float3(0.0, 0.0, 0.0);
 
 	const float3 viewport_u = float3(viewport_width, 0.0, 0.0);
-	const float3 viewport_v = float3(0.0, -viewport_height, 0.0);
+	const float3 viewport_v = float3(0.0, viewport_height, 0.0);
 	const float3 pixel_delta_u = viewport_u / img_width;
 	const float3 pixel_delta_v = viewport_v / img_height;
 
