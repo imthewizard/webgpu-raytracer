@@ -1,11 +1,24 @@
 #define FLOAT_MAX 3.40282346638528859812e+38
+#define EPSILON 1e-3
 
 [format("rgba8")]
 WTexture2D tex;
 
+struct Material {
+	float3 color;
+	float ior;
+	bool specular;
+
+	static Material no_material()
+	{
+		return {float3(0), FLOAT_MAX, false};
+	}
+}
+
 struct Sphere {
 	float3 center;
 	float radius;
+	Material mat;
 
 	RayResult intersect(Ray ray)
 	{
@@ -20,10 +33,10 @@ struct Sphere {
 		float t2 = -b+h;
 		if (t2 < 0.0) return RayResult.no_hit(); // no intersection
 
-		float t = t1 < 0.0 ? t1 : t2;
+		float t = t1 < 0.0 ? t2 : t1;
 		float3 point = ray.point(t);
 		float3 normal = (point - this.center) / this.radius;
-		return {normal, t};
+		return {normal, t, mat};
 	}
 };
 
@@ -40,10 +53,11 @@ struct Ray {
 struct RayResult {
 	float3 normal;
 	float t;
+	Material mat;
 
 	static RayResult no_hit()
 	{
-		return {float3(0), -1.0};
+		return {float3(0), -1.0, Material.no_material()};
 	}
 
 	bool has_hit()
@@ -52,25 +66,80 @@ struct RayResult {
 	}
 }
 
-float3 ray_color(Ray ray)
+float3 sky_color(Ray ray)
 {
-	Sphere spheres[3] = {
-		{float3(0, 0, 1.5), 0.5},
-		{float3(3, 0, 4.0), 0.35},
-		{float3(-2.5, -0.5, 3.0), 0.65},
+	float h = (ray.direction.y + 1.0) / 2;
+	return lerp(float3(1.0, 1.0, 1.0), float3(0.3, 0.7, 1.0), h);
+}
+
+RayResult intersect_scene(Ray ray)
+{
+	Sphere spheres[4] = {
+		{float3(0, 0, 1.5), 0.5, Material(float3(1.0, 0.0, 0.0), 0.0, true)},
+		{float3(3, 0, 4.0), 0.35, Material(float3(0.0, 1.0, 0.0), 1.18, false)},
+		{float3(-2.5, -0.5, 3.0), 0.65, Material(float3(0.0, 0.0, 1.0), 1.0, false)},
+		{float3(0, -65, 25), 50, Material(float3(1.0, 0.5, 1.0), 0.0, false)},
 	};
-	RayResult closest_hit = {float3(0.0), FLOAT_MAX};
-	for (int i = 0; i < 3; i++) {
+	RayResult closest_hit = {float3(0.0), FLOAT_MAX, Material.no_material()};
+	for (int i = 0; i < 4; i++) {
 		RayResult info = spheres[i].intersect(ray);
 		if (info.has_hit() && info.t < closest_hit.t) {
 			closest_hit = info;
 		}
 	}
-	if (closest_hit.t < FLOAT_MAX) {
-		return (closest_hit.normal + 1) / 2;
+	return closest_hit;
+}
+
+float3 raytrace(Ray ray)
+{
+	const int max_depth = 6;
+
+	float3 throughput = float3(1.0);
+	Ray current_ray = ray;
+	for (int i = 0; i < max_depth; i++) {
+		RayResult closest_hit = intersect_scene(current_ray);
+		if (closest_hit.t < FLOAT_MAX) {
+			Material mat = closest_hit.mat;
+
+			float3 incident = normalize(current_ray.direction);
+			float incident_dot_normal = dot(incident, closest_hit.normal);
+			bool is_front_face = incident_dot_normal < 0.0;
+			float3 normal = is_front_face ? closest_hit.normal : -closest_hit.normal;
+			float cos_theta = abs(incident_dot_normal);
+
+
+			bool is_transmissive = mat.ior > 0.0;
+			bool is_specular = mat.specular == true;
+			float ior_ratio = is_front_face ? 1.0 / mat.ior : mat.ior;
+			bool cannot_refract = ior_ratio * ior_ratio * (1 - cos_theta * cos_theta) > 1.0;
+
+			Ray next_ray;
+			next_ray.origin = current_ray.point(closest_hit.t) + normal * EPSILON;
+
+			if (is_specular || (is_transmissive && cannot_refract)) {
+				next_ray.direction = reflect(incident, normal);
+			} else if (is_transmissive) {
+				next_ray.direction = refract(incident, normal, ior_ratio);
+			} else {
+				// Lambertian
+				throughput *= mat.color;
+				break;
+			}
+
+			current_ray = next_ray;
+			throughput *= mat.color;
+		} else {
+			throughput *= sky_color(ray);
+			break;
+		}
 	}
-	float h = (ray.direction.y + 1.0) / 2;
-	return lerp(float3(1.0, 1.0, 1.0), float3(0.3, 0.7, 1.0), h);
+	return throughput;
+}
+
+float3 ray_color(Ray ray)
+{
+	// return raytrace(ray, 0);
+	return raytrace(ray);
 }
 
 [shader("compute")]
