@@ -1,4 +1,4 @@
-import { js_print_str } from "./main.js"
+import { js_print_str, get_zig_context } from "./main.js"
 
 let device
 let context
@@ -9,6 +9,13 @@ const canvas = document.getElementById("canvas")
 let computeModule
 let baseShaderModule
 let screen_texture
+
+let vertfrag_pipeline
+let vertfrag_bindgroup
+
+let compute_pipeline
+let compute_bindgroup
+let zig_context_buffer
 
 export async function initWebGPU() {
 	if (!navigator.gpu) {
@@ -47,6 +54,49 @@ export async function initWebGPU() {
 		device,
 		format: presentationFormat,
 	})
+
+	vertfrag_pipeline = device.createRenderPipeline({
+		label: "triangle",
+		layout: "auto",
+		vertex: {
+			entryPoint: "vertexMain",
+			module: baseShaderModule,
+		},
+		fragment: {
+			entryPoint: "fragmentMain",
+			module: baseShaderModule,
+			targets: [{ format: presentationFormat }],
+		},
+	})
+	vertfrag_bindgroup = device.createBindGroup({
+		label: "vertfrag bindgroup",
+		layout: vertfrag_pipeline.getBindGroupLayout(0),
+		entries: [
+			{ binding: 0, resource: screen_texture.createView() },
+			{ binding: 1, resource: device.createSampler() },
+		],
+	})
+
+	compute_pipeline = device.createComputePipeline({
+		label: "compute",
+		layout: "auto",
+		compute: {
+			module: computeModule,
+		},
+	})
+	zig_context_buffer = device.createBuffer({
+		size: get_zig_context().byteLength,
+		usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+	})
+	device.queue.writeBuffer(zig_context_buffer, 0, get_zig_context());
+	compute_bindgroup = device.createBindGroup({
+		label: "compute bindgroup",
+		layout: compute_pipeline.getBindGroupLayout(0),
+		entries: [
+			{ binding: 0, resource: { buffer: zig_context_buffer } },
+			{ binding: 1, resource: screen_texture },
+		],
+	})
 }
 
 async function loadShader(file) {
@@ -64,30 +114,14 @@ async function loadShader(file) {
 function invokeComputeShader() {
 	const module = computeModule
 
-	const pipeline = device.createComputePipeline({
-		label: "compute",
-		layout: "auto",
-		compute: {
-			module,
-		},
-	})
-
-	const bindGroup = device.createBindGroup({
-		label: "compute bindGroup",
-		layout: pipeline.getBindGroupLayout(0),
-		entries: [
-			{ binding: 0, resource: screen_texture },
-		],
-	})
-
 	const encoder = device.createCommandEncoder({
 		label: "compute encoder",
 	})
 	const pass = encoder.beginComputePass({
 		label: "compute pass",
 	})
-	pass.setPipeline(pipeline)
-	pass.setBindGroup(0, bindGroup)
+	pass.setPipeline(compute_pipeline)
+	pass.setBindGroup(0, compute_bindgroup)
 	pass.dispatchWorkgroups(640 / 16, 480 / 16) // hardcoded
 	pass.end()
 
@@ -97,29 +131,6 @@ function invokeComputeShader() {
 
 function invokeVertFragShader() {
 	const module = baseShaderModule
-
-	const pipeline = device.createRenderPipeline({
-		label: "triangle",
-		layout: "auto",
-		vertex: {
-			entryPoint: "vertexMain",
-			module,
-		},
-		fragment: {
-			entryPoint: "fragmentMain",
-			module,
-			targets: [{ format: presentationFormat }],
-		},
-	})
-
-	const bindGroup = device.createBindGroup({
-		label: "vertfrag bindGroup",
-		layout: pipeline.getBindGroupLayout(0),
-		entries: [
-			{ binding: 0, resource: screen_texture.createView() },
-			{ binding: 1, resource: device.createSampler() },
-		],
-	})
 
 	const renderPassDescriptor = {
 		label: "canvas renderPass",
@@ -136,8 +147,8 @@ function invokeVertFragShader() {
 	const encoder = device.createCommandEncoder({label: "encoder"})
 
 	const pass = encoder.beginRenderPass(renderPassDescriptor)
-	pass.setPipeline(pipeline)
-	pass.setBindGroup(0, bindGroup)
+	pass.setPipeline(vertfrag_pipeline)
+	pass.setBindGroup(0, vertfrag_bindgroup)
 	pass.draw(6)
 	pass.end()
 

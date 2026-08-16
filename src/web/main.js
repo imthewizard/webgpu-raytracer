@@ -2,6 +2,12 @@ import { initWebGPU, importObject } from "./glue.js"
 
 let wasmModule
 
+export function get_zig_context() {
+	const ptr = wasmModule.instance.exports.get_context()
+	const size = wasmModule.instance.exports.get_context_size()
+	return new Uint8Array(wasmModule.instance.exports.memory.buffer, ptr, size)
+}
+
 export function js_print_str(ptr, len) {
 	const memBuffer = new Uint8Array(wasmModule.instance.exports.memory.buffer)
 	const decoder = new TextDecoder("utf-8")
@@ -10,14 +16,9 @@ export function js_print_str(ptr, len) {
 }
 
 async function js_main() {
+	await WebAssembly.instantiateStreaming(fetch("webgpu_raytracer.wasm"), importObject).then(obj => { wasmModule = obj })
 	await initWebGPU()
-
-	await WebAssembly.instantiateStreaming(fetch("webgpu_raytracer.wasm"), importObject).then(obj => {
-		wasmModule = obj
-
-		wasmModule.instance.exports.init()
-	})
-	console.log("Loaded")
+	wasmModule.instance.exports.init();
 }
 
 js_main()

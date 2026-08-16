@@ -1,8 +1,14 @@
 #define FLOAT_MAX 3.40282346638528859812e+38
 #define EPSILON 1e-3
 
+struct Context {
+	float3 camera_position;
+	float padding;
+}
+
 [format("rgba8")]
-WTexture2D tex;
+uniform WTexture2D tex;
+uniform Context ctx;
 
 struct Material {
 	float3 color;
@@ -185,7 +191,7 @@ void computeMain(uint3 thread_id : SV_DispatchThreadID)
 	const float viewport_height = 2.0;
 	const float viewport_width = viewport_height * img_width / img_height;
 
-	const float3 camera_center = float3(0.0, 1.0, -2.0);
+	const float3 camera_center = ctx.camera_position;
 
 	const float3 viewport_u = float3(viewport_width, 0.0, 0.0);
 	const float3 viewport_v = float3(0.0, viewport_height, 0.0);
