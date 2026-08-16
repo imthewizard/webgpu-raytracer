@@ -18,8 +18,7 @@ fn log(msg: []const u8) void {
 }
 
 export fn init() void {
-    drawTriangle();
-    log("Finished");
+    new_frame();
 }
 
 export fn get_context() [*]const u8 {
@@ -28,4 +27,9 @@ export fn get_context() [*]const u8 {
 
 export fn get_context_size() usize {
     return @sizeOf(Context);
+}
+
+export fn new_frame() void {
+    drawTriangle();
+    log("New frame");
 }

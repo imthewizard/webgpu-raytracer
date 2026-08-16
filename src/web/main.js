@@ -1,6 +1,6 @@
 import { initWebGPU, importObject } from "./glue.js"
 
-let wasmModule
+export let wasmModule
 
 export function get_zig_context() {
 	const ptr = wasmModule.instance.exports.get_context()

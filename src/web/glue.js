@@ -1,4 +1,4 @@
-import { js_print_str, get_zig_context } from "./main.js"
+import { js_print_str, get_zig_context, wasmModule } from "./main.js"
 
 let device
 let context
@@ -160,15 +160,16 @@ export const importObject = {
 	env: {
 		js_print_str: js_print_str,
 		drawTriangle: function() {
-			// (async() => {
-			// 	await invokeComputeShader()
-			// 	await invokeVertFragShader()
-			// })
-			invokeComputeShader()
-			invokeVertFragShader()
+			update()
 		},
 	}
 }
 
+function update() {
+	invokeComputeShader()
+	invokeVertFragShader()
+
+	requestAnimationFrame(wasmModule.instance.exports.new_frame)
+}
 
 // Glue code
