@@ -166,6 +166,7 @@ export const importObject = {
 }
 
 function update() {
+	device.queue.writeBuffer(zig_context_buffer, 0, get_zig_context());
 	invokeComputeShader()
 	invokeVertFragShader()
 

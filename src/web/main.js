@@ -21,4 +21,14 @@ async function js_main() {
 	wasmModule.instance.exports.init();
 }
 
+document.addEventListener("keydown", (event) => {
+	const keys = {
+		KeyW: 0,
+		KeyA: 1,
+		KeyS: 2,
+		KeyD: 3,
+	}
+	wasmModule.instance.exports.on_keydown(keys[event.code])
+})
+
 js_main()
